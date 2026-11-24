@@ -21,6 +21,21 @@ MIN_CHARS = 1
 MAX_CHARS = 200
 
 
+def validate_line(line: str) -> str:
+    """Return the stripped entry line, or raise ValueError if it breaks the gate."""
+    cleaned = line.strip()
+    if not (MIN_CHARS <= len(cleaned) <= MAX_CHARS):
+        raise ValueError(
+            f"line is {len(cleaned)} characters, "
+            f"gate needs {MIN_CHARS}-{MAX_CHARS}"
+        )
+    if "\n" in cleaned or "\r" in cleaned:
+        raise ValueError("entry must be a single line")
+    if not cleaned.strip():
+        raise ValueError("entry must not be only white space")
+    return cleaned
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Write the agent-confession entry line."
@@ -32,16 +47,13 @@ def main() -> int:
     )
     args = parser.parse_args()
     output_path = args.output
-    line = CONFESSION.strip()
-    if not (MIN_CHARS <= len(line) <= MAX_CHARS):
-        print(
-            f"refusing: line is {len(line)} characters, "
-            f"gate needs {MIN_CHARS}-{MAX_CHARS}",
-            file=sys.stderr,
-        )
+    if not output_path:
+        print("refusing: no output path given", file=sys.stderr)
         return 1
-    if "\n" in line or "\r" in line:
-        print("refusing: entry must be a single line", file=sys.stderr)
+    try:
+        line = validate_line(CONFESSION)
+    except ValueError as exc:
+        print(f"refusing: {exc}", file=sys.stderr)
         return 1
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
